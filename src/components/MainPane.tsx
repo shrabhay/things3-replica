@@ -3,19 +3,22 @@ import {
   Archive,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Inbox as InboxIcon,
   Layers,
   Sun,
   Tag as TagIcon,
   Trash2,
 } from "lucide-react";
-import type { Area, Project, SmartListId, Tag, Task } from "../db/types";
+import type { Area, Project, SmartListId, Tag, Task, ViewSelection } from "../db/types";
 import { useAppStore } from "../store/useAppStore";
 import { taskBelongsToSmartList, sortByOrder, projectProgress } from "../lib/lists";
 import { formatLogDate } from "../lib/dates";
 import { TaskList } from "./TaskList";
 import { TaskRow } from "./TaskRow";
 import { ProjectProgressIcon } from "./ProjectProgressIcon";
+import { WhenPicker, DeadlinePicker } from "./WhenPicker";
 import { createProject, toggleProjectComplete, updateArea, updateProject } from "../db/actions";
 
 const SMART_META: Record<
@@ -62,6 +65,104 @@ function Header({
       )}
       {typeof count === "number" && count > 0 && (
         <span className="text-lg font-medium text-neutral-400">{count}</span>
+      )}
+    </div>
+  );
+}
+
+function AreaView({
+  areaId,
+  tasks,
+  filteredBySearch,
+  projects,
+  areas,
+  tags,
+  setView,
+}: {
+  areaId: string;
+  tasks: Task[];
+  filteredBySearch: Task[];
+  projects: Project[];
+  areas: Area[];
+  tags: Tag[];
+  setView: (view: ViewSelection) => void;
+}) {
+  const [showCompleted, setShowCompleted] = useState(false);
+  const area = areas.find((a) => a.id === areaId);
+  if (!area) return null;
+
+  const areaProjects = sortByOrder(projects.filter((p) => p.areaId === area.id && !p.trashed));
+  const activeProjects = areaProjects.filter((p) => projectProgress(tasks, p.id) < 100);
+  const completedProjects = areaProjects.filter((p) => projectProgress(tasks, p.id) >= 100);
+  const directTasks = filteredBySearch.filter(
+    (t) => !t.trashed && t.status === "open" && t.areaId === area.id && !t.projectId,
+  );
+
+  function ProjectRow({ project }: { project: Project }) {
+    const projectTasks = tasks.filter(
+      (t) => t.projectId === project.id && !t.trashed && t.status === "open",
+    );
+    return (
+      <button
+        onClick={() => setView({ kind: "project", id: project.id })}
+        className="flex items-center gap-2 border-b border-black/[0.06] px-6 py-2.5 text-left hover:bg-black/[0.02] dark:border-white/[0.06] dark:hover:bg-white/[0.03]"
+      >
+        <ProjectProgressIcon
+          percent={projectProgress(tasks, project.id)}
+          size={15}
+          className="shrink-0 text-emerald-600"
+        />
+        <span className="flex-1 truncate text-[14px] font-medium">{project.title}</span>
+        {projectTasks.length > 0 && (
+          <span className="text-[12px] text-neutral-400">{projectTasks.length}</span>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col overflow-y-auto">
+      <Header
+        icon={Layers}
+        tint="text-sky-600"
+        title={area.title}
+        onRename={(title) => updateArea(area.id, { title })}
+      />
+      <div className="px-4">
+        <button
+          className="mb-2 rounded-md px-2 py-1 text-[13px] text-sky-600 hover:bg-black/5 dark:hover:bg-white/10"
+          onClick={async () => {
+            const id = await createProject({ title: "New Project", areaId: area.id });
+            setView({ kind: "project", id });
+          }}
+        >
+          + New Project
+        </button>
+      </div>
+      {activeProjects.map((project) => (
+        <ProjectRow key={project.id} project={project} />
+      ))}
+      <TaskList
+        tasks={directTasks}
+        tags={tags}
+        projects={projects}
+        areas={areas}
+        quickAddDefaults={{ when: "anytime", areaId: area.id }}
+        emptyMessage="No standalone to-dos in this area."
+      />
+      {completedProjects.length > 0 && (
+        <div className="border-t border-black/[0.06] dark:border-white/[0.06]">
+          <button
+            onClick={() => setShowCompleted((s) => !s)}
+            className="flex w-full items-center gap-1.5 px-6 py-2.5 text-left text-[12px] font-semibold uppercase text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+          >
+            {showCompleted ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            Completed ({completedProjects.length})
+          </button>
+          {showCompleted && completedProjects.map((project) => (
+            <ProjectRow key={project.id} project={project} />
+          ))}
+        </div>
       )}
     </div>
   );
@@ -174,71 +275,16 @@ export function MainPane({ tasks, projects, areas, tags }: MainPaneProps) {
   }
 
   if (view.kind === "area") {
-    const area = areas.find((a) => a.id === view.id);
-    if (!area) return null;
-    const areaProjects = sortByOrder(
-      projects.filter((p) => p.areaId === area.id && !p.trashed),
-    );
-    const directTasks = filteredBySearch.filter(
-      (t) => !t.trashed && t.status === "open" && t.areaId === area.id && !t.projectId,
-    );
-    return (
-      <div className="flex flex-1 flex-col overflow-y-auto">
-        <Header
-          key={area.id}
-          icon={Layers}
-          tint="text-sky-600"
-          title={area.title}
-          onRename={(title) => updateArea(area.id, { title })}
-        />
-        <div className="px-4">
-          <button
-            className="mb-2 rounded-md px-2 py-1 text-[13px] text-sky-600 hover:bg-black/5 dark:hover:bg-white/10"
-            onClick={async () => {
-              const id = await createProject({ title: "New Project", areaId: area.id });
-              setView({ kind: "project", id });
-            }}
-          >
-            + New Project
-          </button>
-        </div>
-        {areaProjects.map((project) => {
-          const projectTasks = tasks.filter(
-            (t) => t.projectId === project.id && !t.trashed && t.status === "open",
-          );
-          return (
-            <button
-              key={project.id}
-              onClick={() => setView({ kind: "project", id: project.id })}
-              className="flex items-center gap-2 border-b border-black/[0.06] px-6 py-2.5 text-left hover:bg-black/[0.02] dark:border-white/[0.06] dark:hover:bg-white/[0.03]"
-            >
-              <ProjectProgressIcon
-                percent={projectProgress(tasks, project.id)}
-                size={15}
-                className="shrink-0 text-emerald-600"
-              />
-              <span className="flex-1 truncate text-[14px] font-medium">{project.title}</span>
-              <span className="text-[12px] text-neutral-400">{projectTasks.length}</span>
-            </button>
-          );
-        })}
-        <TaskList
-          tasks={directTasks}
-          tags={tags}
-          projects={projects}
-          areas={areas}
-          quickAddDefaults={{ when: "anytime", areaId: area.id }}
-          emptyMessage="No standalone to-dos in this area."
-        />
-      </div>
-    );
+    return <AreaView key={view.id} areaId={view.id} tasks={tasks} filteredBySearch={filteredBySearch} projects={projects} areas={areas} tags={tags} setView={setView} />;
   }
 
   if (view.kind === "project") {
     const project = projects.find((p) => p.id === view.id);
     if (!project) return null;
+    // Include completed/canceled to-dos too — they stay visible (struck through) in the
+    // project until trashed, rather than disappearing the moment they're checked off.
     const projectTasks = filteredBySearch.filter(
-      (t) => t.projectId === project.id && !t.trashed && t.status === "open",
+      (t) => t.projectId === project.id && !t.trashed,
     );
     return (
       <div className="flex flex-1 flex-col overflow-y-auto">
@@ -256,7 +302,7 @@ export function MainPane({ tasks, projects, areas, tags }: MainPaneProps) {
             />
           }
         />
-        <div className="px-6 pb-2">
+        <div className="flex flex-wrap items-center gap-1.5 px-6 pb-2">
           <button
             onClick={() => toggleProjectComplete(project.id)}
             className={`rounded-md px-2 py-1 text-[12px] ${
@@ -267,6 +313,8 @@ export function MainPane({ tasks, projects, areas, tags }: MainPaneProps) {
           >
             {project.status === "completed" ? "Completed ✓" : "Mark Project Complete"}
           </button>
+          <WhenPicker value={project} onChange={(patch) => updateProject(project.id, patch)} />
+          <DeadlinePicker value={project} onChange={(patch) => updateProject(project.id, patch)} />
         </div>
         <TaskList
           tasks={projectTasks}

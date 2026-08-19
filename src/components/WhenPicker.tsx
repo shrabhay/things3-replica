@@ -1,8 +1,7 @@
 import { CalendarClock, Moon, Sun, Archive, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Popover } from "./Popover";
-import type { Task } from "../db/types";
-import { updateTask } from "../db/actions";
+import type { Schedulable } from "../db/types";
 import { formatFriendlyDate, todayISO } from "../lib/dates";
 
 function Row({
@@ -27,8 +26,13 @@ function Row({
   );
 }
 
-export function WhenPicker({ task }: { task: Task }) {
-  const hasWhen = task.when !== "inbox" || task.startDate;
+interface SchedulableProps {
+  value: Schedulable;
+  onChange: (patch: Partial<Schedulable>) => void;
+}
+
+export function WhenPicker({ value, onChange }: SchedulableProps) {
+  const hasWhen = value.when !== "inbox" || value.startDate;
   return (
     <Popover
       trigger={(open) => (
@@ -41,9 +45,9 @@ export function WhenPicker({ task }: { task: Task }) {
           }`}
         >
           <CalendarClock size={12} />
-          {task.startDate
-            ? formatFriendlyDate(task.startDate) + (task.evening ? " Evening" : "")
-            : task.when === "someday"
+          {value.startDate
+            ? formatFriendlyDate(value.startDate) + (value.evening ? " Evening" : "")
+            : value.when === "someday"
               ? "Someday"
               : "When"}
         </button>
@@ -56,7 +60,7 @@ export function WhenPicker({ task }: { task: Task }) {
             tint="text-amber-500"
             label="Today"
             onClick={() => {
-              updateTask(task.id, { when: "today", startDate: todayISO(), evening: false });
+              onChange({ when: "today", startDate: todayISO(), evening: false });
               close();
             }}
           />
@@ -65,7 +69,7 @@ export function WhenPicker({ task }: { task: Task }) {
             tint="text-indigo-500"
             label="This Evening"
             onClick={() => {
-              updateTask(task.id, { when: "today", startDate: todayISO(), evening: true });
+              onChange({ when: "today", startDate: todayISO(), evening: true });
               close();
             }}
           />
@@ -79,11 +83,7 @@ export function WhenPicker({ task }: { task: Task }) {
               className="w-0 opacity-0"
               onChange={(e) => {
                 if (!e.target.value) return;
-                updateTask(task.id, {
-                  when: "anytime",
-                  startDate: e.target.value,
-                  evening: false,
-                });
+                onChange({ when: "anytime", startDate: e.target.value, evening: false });
                 close();
               }}
             />
@@ -93,7 +93,7 @@ export function WhenPicker({ task }: { task: Task }) {
             tint="text-amber-700"
             label="Someday"
             onClick={() => {
-              updateTask(task.id, { when: "someday", startDate: null, evening: false });
+              onChange({ when: "someday", startDate: null, evening: false });
               close();
             }}
           />
@@ -103,7 +103,7 @@ export function WhenPicker({ task }: { task: Task }) {
             tint="text-neutral-400"
             label="No Date (Anytime)"
             onClick={() => {
-              updateTask(task.id, { when: "anytime", startDate: null, evening: false });
+              onChange({ when: "anytime", startDate: null, evening: false });
               close();
             }}
           />
@@ -113,19 +113,19 @@ export function WhenPicker({ task }: { task: Task }) {
   );
 }
 
-export function DeadlinePicker({ task }: { task: Task }) {
+export function DeadlinePicker({ value, onChange }: SchedulableProps) {
   return (
     <Popover
       trigger={(open) => (
         <button
           onClick={open}
           className={`no-drag flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] ${
-            task.deadline
+            value.deadline
               ? "bg-red-500/10 text-red-600 dark:text-red-400"
               : "text-neutral-400 hover:bg-black/5 dark:hover:bg-white/10"
           }`}
         >
-          {task.deadline ? `Deadline ${formatFriendlyDate(task.deadline)}` : "Deadline"}
+          {value.deadline ? `Deadline ${formatFriendlyDate(value.deadline)}` : "Deadline"}
         </button>
       )}
     >
@@ -133,17 +133,17 @@ export function DeadlinePicker({ task }: { task: Task }) {
         <div className="w-48 space-y-1 p-1">
           <input
             type="date"
-            defaultValue={task.deadline ?? ""}
+            defaultValue={value.deadline ?? ""}
             className="w-full rounded-md border border-black/10 bg-transparent px-2 py-1 text-[13px] dark:border-white/10"
             onChange={(e) => {
-              updateTask(task.id, { deadline: e.target.value || null });
+              onChange({ deadline: e.target.value || null });
             }}
           />
-          {task.deadline && (
+          {value.deadline && (
             <button
               className="w-full rounded-md px-2 py-1 text-left text-[13px] text-neutral-500 hover:bg-black/5 dark:hover:bg-white/10"
               onClick={() => {
-                updateTask(task.id, { deadline: null });
+                onChange({ deadline: null });
                 close();
               }}
             >

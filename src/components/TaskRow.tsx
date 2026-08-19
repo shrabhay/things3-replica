@@ -7,6 +7,7 @@ import {
   cancelTask,
   deleteTaskForever,
   restoreTask,
+  toggleChecklistItem,
   toggleTaskComplete,
   trashTask,
   updateTask,
@@ -16,6 +17,7 @@ import { WhenPicker, DeadlinePicker } from "./WhenPicker";
 import { TagPicker } from "./TagPicker";
 import { ProjectAreaPicker } from "./ProjectAreaPicker";
 import { ChecklistEditor } from "./ChecklistEditor";
+import { isTodayDate, formatFriendlyDate } from "../lib/dates";
 
 interface TaskRowProps {
   task: Task;
@@ -107,28 +109,70 @@ export function TaskRow({
             )}
           </div>
 
-          {!expanded && (task.startDate || task.deadline || task.tagIds.length > 0) && (
-            <div className="mt-1 flex flex-wrap items-center gap-1">
-              {task.startDate && (
-                <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[11px] text-blue-600 dark:text-blue-400">
-                  {task.evening ? "Evening" : "Scheduled"}
-                </span>
-              )}
-              {task.deadline && (
-                <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] text-red-600 dark:text-red-400">
-                  Deadline
-                </span>
-              )}
-              {tags
-                .filter((t) => task.tagIds.includes(t.id))
-                .map((t) => (
-                  <span
-                    key={t.id}
-                    className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[11px] text-purple-600 dark:text-purple-400"
-                  >
-                    {t.name}
+          {(() => {
+            const scheduledToday = task.startDate && isTodayDate(task.startDate);
+            // A plain "today" date is redundant inside the Today view itself, so only show
+            // a date chip when it's genuinely in the future (Upcoming), or it's this evening.
+            const showDateChip = task.startDate && (!scheduledToday || task.evening);
+            const hasAnyBadge = showDateChip || task.deadline || task.tagIds.length > 0;
+            if (expanded || !hasAnyBadge) return null;
+            return (
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                {showDateChip &&
+                  (scheduledToday ? (
+                    <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[11px] text-indigo-600 dark:text-indigo-400">
+                      Evening
+                    </span>
+                  ) : (
+                    <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[11px] text-blue-600 dark:text-blue-400">
+                      {formatFriendlyDate(task.startDate!)}
+                      {task.evening ? " Evening" : ""}
+                    </span>
+                  ))}
+                {task.deadline && (
+                  <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-[11px] text-red-600 dark:text-red-400">
+                    Deadline
                   </span>
-                ))}
+                )}
+                {tags
+                  .filter((t) => task.tagIds.includes(t.id))
+                  .map((t) => (
+                    <span
+                      key={t.id}
+                      className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[11px] text-purple-600 dark:text-purple-400"
+                    >
+                      {t.name}
+                    </span>
+                  ))}
+              </div>
+            );
+          })()}
+
+          {!expanded && task.checklist.length > 0 && (
+            <div className="mt-1 space-y-0.5">
+              {task.checklist.map((item) => (
+                <div key={item.id} className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleChecklistItem(task.id, item.id)}
+                    className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${
+                      item.completed
+                        ? "border-emerald-500 bg-emerald-500"
+                        : "border-neutral-400 dark:border-neutral-500"
+                    }`}
+                  >
+                    {item.completed && (
+                      <span className="block h-1.5 w-1.5 rounded-full bg-white" />
+                    )}
+                  </button>
+                  <span
+                    className={`text-[12.5px] ${
+                      item.completed ? "text-neutral-400 line-through" : "text-neutral-600 dark:text-neutral-300"
+                    }`}
+                  >
+                    {item.title}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 
@@ -152,8 +196,8 @@ export function TaskRow({
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 {variant === "active" && (
                   <>
-                    <WhenPicker task={task} />
-                    <DeadlinePicker task={task} />
+                    <WhenPicker value={task} onChange={(patch) => updateTask(task.id, patch)} />
+                    <DeadlinePicker value={task} onChange={(patch) => updateTask(task.id, patch)} />
                     <TagPicker task={task} tags={tags} />
                     {showProjectPicker && (
                       <ProjectAreaPicker task={task} projects={projects} areas={areas} />

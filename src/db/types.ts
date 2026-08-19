@@ -8,19 +8,23 @@ export interface ChecklistItem {
   completed: boolean;
 }
 
-export interface Task {
-  id: string;
-  title: string;
-  notes: string;
-  status: TaskStatus;
-  trashed: boolean;
+/** Fields shared by anything the When/Deadline pickers can schedule (Task and Project). */
+export interface Schedulable {
   when: When;
-  /** ISO date (yyyy-MM-dd) the task is scheduled/started on. Drives Today/Upcoming. */
+  /** ISO date (yyyy-MM-dd) the item is scheduled/started on. Drives Today/Upcoming. */
   startDate: string | null;
   /** Show in the "This Evening" section of Today. */
   evening: boolean;
   /** ISO date (yyyy-MM-dd) deadline, shown as a red chip. */
   deadline: string | null;
+}
+
+export interface Task extends Schedulable {
+  id: string;
+  title: string;
+  notes: string;
+  status: TaskStatus;
+  trashed: boolean;
   projectId: string | null;
   areaId: string | null;
   tagIds: string[];
@@ -31,7 +35,7 @@ export interface Task {
   completedAt: number | null;
 }
 
-export interface Project {
+export interface Project extends Schedulable {
   id: string;
   title: string;
   notes: string;

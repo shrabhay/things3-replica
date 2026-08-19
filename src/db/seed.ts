@@ -33,6 +33,10 @@ function project(title: string, areaId: string | null, tagIds: string[] = []): P
     notes: "",
     status: "open",
     trashed: false,
+    when: "anytime",
+    startDate: null,
+    evening: false,
+    deadline: null,
     areaId,
     tagIds,
     order: projectOrder++,
@@ -154,8 +158,9 @@ export async function seedDemoDataIfEmpty(): Promise<void> {
     }),
   ];
 
-  // --- Home Renovation: 0% done, demonstrates an empty ring + a checklist ---
+  // --- Home Renovation: 0% done, demonstrates an empty ring + a checklist + a project deadline ---
   const homeRenovation = project("Home Renovation", areas.personal.id);
+  homeRenovation.deadline = daysFromNow(45);
   const renovationTasks = [
     task("Get 3 contractor quotes", {
       projectId: homeRenovation.id,

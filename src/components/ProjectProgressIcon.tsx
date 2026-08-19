@@ -41,7 +41,19 @@ export function ProjectProgressIcon({
           transform={`rotate(-90 ${center} ${center})`}
         />
       )}
-      {done && <circle cx={center} cy={center} r={r} fill="currentColor" />}
+      {done && (
+        <>
+          <circle cx={center} cy={center} r={r} fill="currentColor" fillOpacity={0.15} />
+          <path
+            d={`M ${size * 0.27} ${size * 0.52} L ${size * 0.43} ${size * 0.68} L ${size * 0.75} ${size * 0.32}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
     </svg>
   );
 }
