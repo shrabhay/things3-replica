@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "./db/db";
+import { seedDemoDataIfEmpty } from "./db/seed";
 import { Sidebar } from "./components/Sidebar";
 import { MainPane } from "./components/MainPane";
 import { QuickEntryModal } from "./components/QuickEntryModal";
@@ -12,6 +13,10 @@ export default function App() {
   const areas = useLiveQuery(() => db.areas.toArray(), [], []);
   const tags = useLiveQuery(() => db.tags.toArray(), [], []);
   const openQuickEntry = useAppStore((s) => s.openQuickEntry);
+
+  useEffect(() => {
+    seedDemoDataIfEmpty();
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

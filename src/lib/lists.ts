@@ -51,3 +51,13 @@ export function countOpenAndDue(tasks: Task[]): number {
 export function sortByOrder<T extends { order: number }>(items: T[]): T[] {
   return [...items].sort((a, b) => a.order - b.order);
 }
+
+/** 0-100 completion percentage for a project, based on its non-trashed, non-canceled to-dos. */
+export function projectProgress(tasks: Task[], projectId: string): number {
+  const relevant = tasks.filter(
+    (t) => t.projectId === projectId && !t.trashed && t.status !== "canceled",
+  );
+  if (relevant.length === 0) return 0;
+  const done = relevant.filter((t) => t.status === "completed").length;
+  return Math.round((done / relevant.length) * 100);
+}

@@ -11,10 +11,11 @@ import {
 } from "lucide-react";
 import type { Area, Project, SmartListId, Tag, Task } from "../db/types";
 import { useAppStore } from "../store/useAppStore";
-import { taskBelongsToSmartList, sortByOrder } from "../lib/lists";
+import { taskBelongsToSmartList, sortByOrder, projectProgress } from "../lib/lists";
 import { formatLogDate } from "../lib/dates";
 import { TaskList } from "./TaskList";
 import { TaskRow } from "./TaskRow";
+import { ProjectProgressIcon } from "./ProjectProgressIcon";
 import { createProject, toggleProjectComplete, updateArea, updateProject } from "../db/actions";
 
 const SMART_META: Record<
@@ -36,17 +37,19 @@ function Header({
   title,
   count,
   onRename,
+  iconOverride,
 }: {
   icon: React.ElementType;
   tint: string;
   title: string;
   count?: number;
   onRename?: (title: string) => void;
+  iconOverride?: React.ReactNode;
 }) {
   const [value, setValue] = useState(title);
   return (
     <div className="flex items-center gap-2 px-6 pb-3 pt-8">
-      <Icon size={22} className={tint} />
+      {iconOverride ?? <Icon size={22} className={tint} />}
       {onRename ? (
         <input
           value={value}
@@ -209,7 +212,11 @@ export function MainPane({ tasks, projects, areas, tags }: MainPaneProps) {
               onClick={() => setView({ kind: "project", id: project.id })}
               className="flex items-center gap-2 border-b border-black/[0.06] px-6 py-2.5 text-left hover:bg-black/[0.02] dark:border-white/[0.06] dark:hover:bg-white/[0.03]"
             >
-              <Layers size={15} className="text-emerald-600" />
+              <ProjectProgressIcon
+                percent={projectProgress(tasks, project.id)}
+                size={15}
+                className="shrink-0 text-emerald-600"
+              />
               <span className="flex-1 truncate text-[14px] font-medium">{project.title}</span>
               <span className="text-[12px] text-neutral-400">{projectTasks.length}</span>
             </button>
@@ -241,6 +248,13 @@ export function MainPane({ tasks, projects, areas, tags }: MainPaneProps) {
           tint="text-emerald-600"
           title={project.title}
           onRename={(title) => updateProject(project.id, { title })}
+          iconOverride={
+            <ProjectProgressIcon
+              percent={projectProgress(tasks, project.id)}
+              size={22}
+              className="shrink-0 text-emerald-600"
+            />
+          }
         />
         <div className="px-6 pb-2">
           <button

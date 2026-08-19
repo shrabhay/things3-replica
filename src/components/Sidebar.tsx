@@ -15,8 +15,9 @@ import {
 } from "lucide-react";
 import type { Area, Project, SmartListId, Tag, Task } from "../db/types";
 import { useAppStore } from "../store/useAppStore";
-import { taskBelongsToSmartList, sortByOrder } from "../lib/lists";
+import { taskBelongsToSmartList, sortByOrder, projectProgress } from "../lib/lists";
 import { createArea, createProject } from "../db/actions";
+import { ProjectProgressIcon } from "./ProjectProgressIcon";
 
 const SMART_LISTS: { id: SmartListId; label: string; icon: React.ElementType; tint: string }[] = [
   { id: "inbox", label: "Inbox", icon: InboxIcon, tint: "text-blue-500" },
@@ -169,12 +170,13 @@ export function Sidebar({ tasks, projects, areas, tags }: SidebarProps) {
                           : "hover:bg-black/5 dark:hover:bg-white/10"
                       }`}
                     >
-                      <Layers
+                      <ProjectProgressIcon
+                        percent={projectProgress(tasks, project.id)}
                         size={14}
                         className={
                           isActive({ kind: "project", id: project.id })
-                            ? "text-white"
-                            : "text-emerald-600"
+                            ? "shrink-0 text-white"
+                            : "shrink-0 text-emerald-600"
                         }
                       />
                       <span className="flex-1 truncate text-left">{project.title}</span>
